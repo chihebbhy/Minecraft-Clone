@@ -23,8 +23,8 @@ public:
 
     void moveForward(double amount)
     {
-        x += sin(yaw) * cos(pitch) * amount;
-        y -= sin(pitch) * amount;   // ← FIX
+        x -= sin(yaw) * cos(pitch) * amount;
+        y -= sin(pitch) * amount;
         z -= cos(yaw) * cos(pitch) * amount;
     }
 
@@ -322,6 +322,12 @@ int main(int argc, char* argv[])
         {
             for(int j = -20; j <20 ; j++)
             {
+                if(j == -20){
+                    SDL_SetRenderDrawColor(renderer,0,255,0,255);
+                }
+                else{
+                    SDL_SetRenderDrawColor(renderer,255,255,255,255);
+                }
                 draw3DLine(renderer, camera, i, -2, j, i+1, -2, j, w, h);
                 draw3DLine(renderer, camera, i, -2, j, i, -2, j+1, w, h);
             }
