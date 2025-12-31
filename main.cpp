@@ -1,7 +1,8 @@
 #include <SDL3/SDL.h>
 #include <cmath>
 #include <iostream>
-
+#include <SDL3_image/SDL_image.h>
+#include <algorithm>
 struct Vec2
 {
     int x,y;
@@ -24,7 +25,6 @@ public:
     void moveForward(double amount)
     {
         x -= sin(yaw) * cos(pitch) * amount;
-        y -= sin(pitch) * amount;
         z -= cos(yaw) * cos(pitch) * amount;
     }
 
@@ -42,7 +42,12 @@ public:
 
 
 };
-
+class Block
+{
+public:
+    double x,y,z; // Position
+    int id ; // id
+};
 /* =========================================================
    PROJECT A 3D POINT TO SCREEN
    ========================================================= */
@@ -195,7 +200,7 @@ void draw3DLine(
 /* =========================================================
    DRAW A CUBE
    ========================================================= */
-void drawCube(
+void draw3DCube(
     SDL_Renderer* renderer,
     const Camera& camera,
     double cx, double cy, double cz,
@@ -257,7 +262,36 @@ void drawCube(
     }
 
 }
+bool DrawTexture(SDL_Renderer * renderer,const Camera& camera,SDL_Texture *texture,Block block , int w, int h){
+    double x = block.x;
+    double y = block.y;
+    double z = block.z;
+    double corners[4][3] = {
+    {x + 0.5 , y + 0.5, z -0.5}, // coin 9odm ymin
+    {x + 0.5 , y + 0.5, z + 0.5}, // coin teli ymin
+    {x - 0.5 , y + 0.5, z - 0.5}, // coin teli ysar
+    {x - 0.5 , y + 0.5, z + 0.5}
+    };
+    int px[4], py[4];
+    for (int i = 0; i < 4; i++)
+    {
+        if (!projectPoint(camera, corners[i][0], corners[i][1], corners[i][2], w, h, px[i], py[i]))
+            return false; // behind camera, skip
+    }
 
+    // Compute bounding rectangle on screen
+    int minX = std::min({px[0], px[1], px[2], px[3]});
+    int maxX = std::max({px[0], px[1], px[2], px[3]});
+    int minY = std::min({py[0], py[1], py[2], py[3]});
+    int maxY = std::max({py[0], py[1], py[2], py[3]});
+
+    SDL_FRect dst = { minX, minY, maxX - minX, maxY - minY };
+    SDL_RenderTexture(renderer, texture, nullptr, &dst);
+
+    return true;
+
+
+                 }
 /* =========================================================
    MAIN
    ========================================================= */
@@ -332,7 +366,25 @@ int main(int argc, char* argv[])
                 draw3DLine(renderer, camera, i, -2, j, i, -2, j+1, w, h);
             }
         }
-        drawCube(renderer, camera, 0, 0, -5, 2.0, w, h);
+        SDL_Surface *surface = IMG_Load("OldGrassTop.png");
+        if(!surface){
+                SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+            exit(-1);
+        }
+        Block dirt ;
+        dirt.x = 0;
+        dirt.y = 0.5;
+        dirt.z = -5;
+
+
+
+
+        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_DestroySurface(surface);
+        draw3DCube(renderer, camera, 0, 0.5, -5, 1.0, w, h);
+        DrawTexture(renderer,camera,texture,dirt,w,h);
         SDL_RenderPresent(renderer);
     }
 
