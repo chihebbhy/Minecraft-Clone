@@ -5,21 +5,27 @@
 #include <SDL3/SDL.h>
 #include <iostream>
 
+// ===== HEADERS =====
+#include "Camera.h"
+
 /* ================= SHADERS ================= */
 // Vertex shader: transforms vertex positions to clip space
 const char* vertexShaderSrc = R"(
 #version 330 core
-layout(location = 0) in vec2 aPos;
+layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aColor;
 
 out vec3 vColor;
 
+uniform mat4 projection;
+uniform mat4 view;
+
 void main()
 {
-    gl_Position = vec4(aPos, 0.0, 1.0);
+    gl_Position = projection * view * vec4(aPos, 1.0); // w = 1 fixed
     vColor = aColor;
 })"
-;
+                              ;
 
 // Fragment shader: outputs color for each pixel
 const char* fragmentShaderSrc = R"(
@@ -50,7 +56,7 @@ int main()
                         SDL_GL_CONTEXT_PROFILE_CORE);
 
     // Create window
-    SDL_Window* window = SDL_CreateWindow("SDL3 + OpenGL Square",
+    SDL_Window* window = SDL_CreateWindow("MINECRAFT!!!!!!!!!!!!!",
                                           800, 600,
                                           SDL_WINDOW_OPENGL);
     if (!window)
@@ -78,35 +84,17 @@ int main()
     }
 
     // ===== Define square vertices (two triangles) =====
- /*
- COMMENT beginning
- float vertices[] = {
-    //    -->    Î
-    //go right|| go up
-        -0.5f, -0.5f,  // bottom-left
-         0.5f, -0.5f,  // bottom-right
-         0.5f,  0.5f,  // top-right
-        -0.5f,  0.5f,  // top-left
-         0.0f,  0.0f   // middle
-    };
-
-    unsigned int indices[] = {
-        0, 1, 5,  // first triangle
-        2, 3, 5   // second triangle
-    };
-COMMENT END
-*/
     float vertices[] = {
-    // x  |   y   | red  | green | blue
-    -0.5f , -0.5f , 1.0f , 0.0f , 0.0f ,
-     0.5f , -0.5f , 1.0f , 0.0f , 0.0f ,
-     0.0f , 0.0f  , 0.0f , 1.0f , 0.0f ,
+    // x  |   y   |   z  | red  | green | blue
+    -0.5f , -0.5f , -0.5f , 0.0f , 1.0f , 0.0f ,
+     0.5f , -0.5f , -0.5f , 1.0f , 0.0f , 0.0f ,
+     0.0f , 0.0f  , -0.5f , 1.0f , 0.0f , 0.0f ,
 
      // triangle 2
 
-    -0.5f , 0.5f , 0.0f , 0.0f , 1.0f ,
-     0.5f , 0.5f , 0.0f , 0.0f , 1.0f ,
-     0.0f , 0.0f , 0.0f , 1.0f , 0.0f
+    -0.5f , 0.5f , -2.5f , 0.0f , 0.0f , 1.0f ,
+     0.5f , 0.5f , -2.5f , 0.0f , 0.0f , 1.0f ,
+     0.0f , -1.0f , -2.5f , 0.0f , 0.0f , 1.0f
 
 
 
@@ -123,12 +111,14 @@ COMMENT END
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // Index buffer
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
     // Tell OpenGL how to interpret vertex data
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(
+        0,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        6 * sizeof(float),
+        (void*)0);
     glEnableVertexAttribArray(0);
     // color (location = 1)
     glVertexAttribPointer(
@@ -136,8 +126,8 @@ COMMENT END
         3,
         GL_FLOAT,
         GL_FALSE,
-        5 * sizeof(float),
-        (void*)(2 * sizeof(float))
+        6 * sizeof(float),
+        (void*)(3 * sizeof(float))
 );
 glEnableVertexAttribArray(1);
     // ===== Compile shaders =====
@@ -158,23 +148,88 @@ glEnableVertexAttribArray(1);
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
+    glEnable(GL_DEPTH_TEST);
+    SDL_SetWindowRelativeMouseMode(window, true);
+
+    Camera Cam(800.0f,600.0f);
+    Cam.upload(shaderProgram);
     // ===== Render loop =====
     bool running = true;
     while (running)
     {
         SDL_Event e;
+        const bool *keyboardState = SDL_GetKeyboardState(NULL);
         while (SDL_PollEvent(&e))
         {
-            if (e.type == SDL_EVENT_QUIT)
-                running = false;
-        }
+            switch(e.type){
+            case SDL_EVENT_QUIT :
+                    running = false;
+                    break;
+            case SDL_EVENT_KEY_DOWN:
+                switch(e.key.key){
+                case SDLK_ESCAPE:
+                    running = false;
+                    break;
+                case SDLK_UP:
+                case SDLK_Z:
+                    Cam.MoveForward(0.1f);
+                    break;
+                case SDLK_DOWN:
+                case SDLK_S:
+                    Cam.MoveForward(-0.1f);
+                    break;
+                case SDLK_RIGHT:
+                case SDLK_D:
+                    Cam.MoveRight(0.1f);
+                    break;
+                case SDLK_LEFT:
+                case SDLK_Q:
+                    Cam.MoveRight(-0.1f);
+                    break;
+                case SDLK_SPACE:
+                    Cam.MoveUp(0.1f);
+                    break;
+                case SDLK_LSHIFT:
+                    Cam.MoveUp(-0.1f);
+                    break;
+                case SDLK_H:
+                    std::cout << "Yaw: " << Cam.GetYaw() << " Pitch: " << Cam.GetPitch() << std::endl;
+                    break;
+                }
+                break;
+            case SDL_EVENT_MOUSE_MOTION:
+                Cam.ProcessMouse(
+                    (float)e.motion.xrel,
+                    (float)e.motion.yrel
+    );
+    break;
 
+        }
+        }
         // Clear screen
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.46f, 0.65f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Draw square
         glUseProgram(shaderProgram);
+
+        Cam.upload(shaderProgram);
+        // Simple perspective matrix
+        float aspect = 800.0f / 600.0f;
+        float fov = 1.0f;
+        float near = 0.1f;
+        float far  = 10.0f;
+
+        float projection[16] = {
+            1.0f/(aspect*fov), 0, 0, 0,
+            0, 1.0f/fov, 0, 0,
+            0, 0, -(far+near)/(far-near), -1,
+            0, 0, -(2*far*near)/(far-near), 0
+        };
+
+        int projLoc = glGetUniformLocation(shaderProgram, "projection");
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
+
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES,0,6);
 
