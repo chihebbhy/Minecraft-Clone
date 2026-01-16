@@ -7,23 +7,26 @@
 
 // ===== HEADERS =====
 #include "Camera.h"
-
+#include "input.h"
+#include "block.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 /* ================= SHADERS ================= */
 // Vertex shader: transforms vertex positions to clip space
 const char* vertexShaderSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 aPos;
-layout(location = 1) in vec3 aColor;
+layout(location = 1) in vec2 aTex;
 
-out vec3 vColor;
+out vec2 TexCoord;
 
 uniform mat4 projection;
 uniform mat4 view;
 
 void main()
 {
-    gl_Position = projection * view * vec4(aPos, 1.0); // w = 1 fixed
-    vColor = aColor;
+    TexCoord = aTex;
+    gl_Position = projection * view * vec4(aPos, 1.0);
 })"
                               ;
 
@@ -31,12 +34,14 @@ void main()
 const char* fragmentShaderSrc = R"(
 #version 330 core
 
-in vec3 vColor;
+in vec2 TexCoord;
 out vec4 FragColor;
+
+uniform sampler2D tex;
 
 void main()
 {
-    FragColor = vec4(vColor, 1.0);
+    FragColor = texture(tex,TexCoord);
 }
 )";
 
@@ -148,11 +153,15 @@ glEnableVertexAttribArray(1);
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
+    glUseProgram(vertexShader);
+    glUniform1i(glGetUniformLocation(shaderProgram,"tex"),0);
+
     glEnable(GL_DEPTH_TEST);
     SDL_SetWindowRelativeMouseMode(window, true);
 
     Camera Cam(800.0f,600.0f);
     Cam.upload(shaderProgram);
+    Block grass(0.0f,0.0f,0.0f);
     // ===== Render loop =====
     bool running = true;
     while (running)
@@ -161,50 +170,9 @@ glEnableVertexAttribArray(1);
         const bool *keyboardState = SDL_GetKeyboardState(NULL);
         while (SDL_PollEvent(&e))
         {
-            switch(e.type){
-            case SDL_EVENT_QUIT :
-                    running = false;
-                    break;
-            case SDL_EVENT_KEY_DOWN:
-                switch(e.key.key){
-                case SDLK_ESCAPE:
-                    running = false;
-                    break;
-                case SDLK_UP:
-                case SDLK_Z:
-                    Cam.MoveForward(0.1f);
-                    break;
-                case SDLK_DOWN:
-                case SDLK_S:
-                    Cam.MoveForward(-0.1f);
-                    break;
-                case SDLK_RIGHT:
-                case SDLK_D:
-                    Cam.MoveRight(0.1f);
-                    break;
-                case SDLK_LEFT:
-                case SDLK_Q:
-                    Cam.MoveRight(-0.1f);
-                    break;
-                case SDLK_SPACE:
-                    Cam.MoveUp(0.1f);
-                    break;
-                case SDLK_LSHIFT:
-                    Cam.MoveUp(-0.1f);
-                    break;
-                case SDLK_H:
-                    std::cout << "Yaw: " << Cam.GetYaw() << " Pitch: " << Cam.GetPitch() << std::endl;
-                    break;
-                }
-                break;
-            case SDL_EVENT_MOUSE_MOTION:
-                Cam.ProcessMouse(
-                    (float)e.motion.xrel,
-                    (float)e.motion.yrel
-    );
-    break;
-
-        }
+            if(!Input::HandleEvent(e,Cam)){
+                running = false;
+            }
         }
         // Clear screen
         glClearColor(0.46f, 0.65f, 1.0f, 1.0f);
@@ -229,10 +197,7 @@ glEnableVertexAttribArray(1);
 
         int projLoc = glGetUniformLocation(shaderProgram, "projection");
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
-
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES,0,6);
-
+        grass.Draw();
         SDL_GL_SwapWindow(window);
     }
 
