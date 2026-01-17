@@ -6,7 +6,7 @@
 Camera::Camera(float width, float height)
 {
     float aspect = width / height;
-    float fovDeg = 1.0f;           // ↓ smaller = less distortion
+    float fovDeg = 60.0f;           // ↓ smaller = less distortion
     float fovRad = fovDeg * 3.1415926f / 180.0f;
 
     float near = 0.1f;
@@ -35,6 +35,12 @@ Camera::Camera(float width, float height)
     projection[15] = 0;
 
     posX = posY = posZ = 0.0f;
+    yaw   = -90.0f;   // look forward (OpenGL -Z)
+    pitch = 0.0f;
+
+    forwardX = 0.0f;
+    forwardY = 0.0f;
+    forwardZ = -1.0f;
 
     updateView();
 }
