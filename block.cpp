@@ -108,8 +108,26 @@ void Block::LoadTexture(const char* path, unsigned int& textureID)
     stbi_image_free(data);
 }
 
-void Block::Draw()
+
+
+void Block::Draw(unsigned int shaderProgram)
 {
+    glUseProgram(shaderProgram);
+
+    float model[16] = {
+        1,0,0,0,
+        0,1,0,0,
+        0,0,1,0,
+        posX,posY,posZ, 1
+    };
+
+    glUniformMatrix4fv(
+        glGetUniformLocation(shaderProgram, "model"),
+        1,
+        GL_FALSE,
+        model
+    );
+
     glBindVertexArray(VAO);
 
     for (int i = 0; i < 6; i++)
@@ -120,9 +138,3 @@ void Block::Draw()
     }
 }
 
-Block::~Block()
-{
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteTextures(6, textures);
-}

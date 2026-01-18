@@ -13,7 +13,6 @@ class Block {
 public:
 
     Block(float x, float y, float z);
-    ~Block();
 
-    void Draw();
+    void Draw(unsigned int);
 };

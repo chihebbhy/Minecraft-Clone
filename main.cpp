@@ -22,11 +22,12 @@ out vec2 TexCoord;
 
 uniform mat4 projection;
 uniform mat4 view;
+uniform mat4 model;
 
 void main()
 {
     TexCoord = aTex;
-    gl_Position = projection * view * vec4(aPos, 1.0);
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
 })"
                               ;
 
@@ -115,7 +116,14 @@ int main()
     int w,h;
     SDL_GetWindowSize(window,&w,&h);
     Camera Cam((float) w, (float) h);
-    Block grass(0.0f,0.0f,0.0f);
+    Block* tab[100];
+
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 10; j++) {
+            tab[i*10 + j] = new Block((float)i, 0.0f, (float)j);
+    }
+}
+
     // ===== Render loop =====
     bool running = true;
     while (running)
@@ -133,9 +141,15 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         Cam.upload(shaderProgram);
-        grass.Draw();
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                tab[i*10 + j]->Draw(shaderProgram);
+    }
+}
         SDL_GL_SwapWindow(window);
     }
+    for (int i = 0; i < 100; i++)
+        delete tab[i];
 
     glDeleteProgram(shaderProgram);
 
